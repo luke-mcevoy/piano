@@ -1,8 +1,15 @@
 "use client";
 
 import { useEffect, useRef, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
+import { shouldReleaseOnPointerLeave } from "@/lib/gestures";
 import { buildKeys, MIDI_TO_SHORTCUT, type PianoKey } from "@/lib/music";
 import { cn } from "@/lib/utils";
+
+function releaseAfterLeave(trackingMidi: number | undefined, keyMidi: number, event: ReactPointerEvent): boolean {
+  const next = event.relatedTarget;
+  const enteredAnotherKey = next instanceof Element && next.closest("[data-piano-key]") != null;
+  return shouldReleaseOnPointerLeave(trackingMidi, keyMidi, event.buttons, enteredAnotherKey);
+}
 
 export function PianoKeyboard({
   lowMidi,
@@ -90,7 +97,7 @@ export function PianoKeyboard({
                 pressPointer(event, key.midi);
               }}
               onPointerLeave={(event) => {
-                if (pointers.current.get(event.pointerId) !== key.midi) return;
+                if (!releaseAfterLeave(pointers.current.get(event.pointerId), key.midi, event)) return;
                 pointers.current.delete(event.pointerId);
                 onRelease(key.midi);
               }}
@@ -117,7 +124,7 @@ export function PianoKeyboard({
                   pressPointer(event, key.midi);
                 }}
                 onPointerLeave={(event) => {
-                  if (pointers.current.get(event.pointerId) !== key.midi) return;
+                  if (!releaseAfterLeave(pointers.current.get(event.pointerId), key.midi, event)) return;
                   pointers.current.delete(event.pointerId);
                   onRelease(key.midi);
                 }}
@@ -157,6 +164,7 @@ function Key({
   return (
     <button
       id={`piano-key-${pianoKey.midi}`}
+      data-piano-key=""
       type="button"
       aria-label={pianoKey.shortcut ? `${label}. Keyboard ${pianoKey.shortcut}` : label}
       aria-pressed={pressed}
@@ -172,7 +180,7 @@ function Key({
         "touch-none overflow-hidden select-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d89a1a]",
         pianoKey.black
           ? "absolute z-20 rounded-b-md border border-black/70 bg-gradient-to-b from-[#3c3c3c] to-[#141414] shadow-[0_8px_10px_rgba(0,0,0,0.35)] data-pressed:from-[#5a4724] data-pressed:to-[#241c10] data-target:from-[#6b5422] data-target:to-[#2c220f] data-target:ring-2 data-target:ring-[#f0c14b] data-wrong:from-[#6d3030] data-wrong:to-[#3a1414] data-wrong:ring-2 data-wrong:ring-[#e7a09a]"
-          : "relative rounded-b-[8px] border border-[#ddd4c6] bg-gradient-to-b from-[#fffefb] to-[#f2ebdf] shadow-[inset_0_-10px_14px_rgba(90,60,20,0.06)] data-pressed:from-[#fff3d4] data-pressed:to-[#efd7a4] data-pressed:translate-y-px data-target:from-[#fff6dc] data-target:to-[#f3ddaa] data-target:ring-2 data-target:ring-[#d89a1a] data-target:z-10 data-wrong:from-[#fde8e4] data-wrong:to-[#f4cdc7] data-wrong:ring-2 data-wrong:ring-[#9f2d2d]",
+          : "relative rounded-b-[8px] border border-[#ddd4c6] bg-gradient-to-b from-[#fffefb] to-[#f2ebdf] shadow-[inset_0_-10px_14px_rgba(90,60,20,0.06)] data-pressed:from-[#fff3d4] data-pressed:to-[#efd7a4] data-target:from-[#fff6dc] data-target:to-[#f3ddaa] data-target:ring-2 data-target:ring-[#d89a1a] data-target:z-10 data-wrong:from-[#fde8e4] data-wrong:to-[#f4cdc7] data-wrong:ring-2 data-wrong:ring-[#9f2d2d]",
         className,
       )}
     >
