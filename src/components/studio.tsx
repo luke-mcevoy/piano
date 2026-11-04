@@ -117,6 +117,15 @@ export function Studio() {
     syncPressed();
   }, [syncPressed]);
 
+  const pressRef = useRef(pressMidi);
+  const releaseRef = useRef(releaseMidi);
+  const releaseAllRef = useRef(releaseAll);
+  useEffect(() => {
+    pressRef.current = pressMidi;
+    releaseRef.current = releaseMidi;
+    releaseAllRef.current = releaseAll;
+  });
+
   useEffect(() => {
     const down = new Set<string>();
     const onKeyDown = (event: KeyboardEvent) => {
@@ -128,17 +137,17 @@ export function Studio() {
       event.preventDefault();
       if (down.has(event.code)) return;
       down.add(event.code);
-      pressMidi(midi);
+      pressRef.current(midi);
     };
     const onKeyUp = (event: KeyboardEvent) => {
+      if (!down.delete(event.code)) return;
       const midi = SHORTCUTS[event.code];
       if (midi == null) return;
-      down.delete(event.code);
-      releaseMidi(midi);
+      releaseRef.current(midi);
     };
     const onBlur = () => {
       down.clear();
-      releaseAll();
+      releaseAllRef.current();
     };
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("keyup", onKeyUp);
@@ -147,9 +156,11 @@ export function Studio() {
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
       window.removeEventListener("blur", onBlur);
+      // Only on unmount. Rebinding used to run this after every correct
+      // practice note and cut the tone off before the attack was audible.
       getSynth().silence();
     };
-  }, [pressMidi, releaseMidi, releaseAll]);
+  }, []);
 
   const heldPitch = soundingMidi == null || !pressed.has(soundingMidi) ? null : pitchFromMidi(soundingMidi);
   const physicsPitch = heldPitch ?? (mode === "practice" && target ? target.pitch : lastPitch);
